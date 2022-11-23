@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import { addAppRoutes } from './src/addAppRoutes'
@@ -14,31 +13,29 @@ const cpuCount = os.cpus().length
 app.use(cors())
 app.use(express.json())
 
-addAppRoutes(app)
+addAppRoutes(app) // all the app routes are added here
 
-//get a todo
-// app.get('/todos/:id', async (req, res) => {
-//     res.writeHead(200, { "Content-type": "image/png" })
-//     res.header('Content-Disposition: attachment; filename=file.exe')
-// })
-
+//multi instance using workers
 if (cluster.isPrimary) {
-    for (let i = 0; i < 2; i++) {
+    // let instanceCount = cpuCount
+    let instanceCount = 2
+
+    for (let i = 0; i < instanceCount; i++) { //can't use more than 2 workers in windows but can be created
         cluster.fork()
     }
-    cluster.schedulingPolicy = 2
-    console.log('cluster', cluster.schedulingPolicy)
-    // cluster.on('exit', (worker, code, signal) => {
-    //     console.log('worker id', worker.process.pid)
-    //     cluster.fork()
-    // })
+    cluster.schedulingPolicy = instanceCount
+
+    // forking a new worker whenever a worker is killed
+    cluster.on('exit', (worker, code, signal) => {
+        cluster.fork()
+    })
 } else if (cluster.isWorker) {
-    // console.log('process', process.pid)
     app.listen(5000, () => {
-        console.log('started', process.pid);
+        console.log(process.pid, 'new worker started')
     })
 }
 
+//single instance
 // app.listen(5000, () => {
 //     console.log('started');
 // })
